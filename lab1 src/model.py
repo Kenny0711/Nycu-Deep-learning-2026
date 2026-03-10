@@ -1,12 +1,13 @@
 import numpy as np
+import json
 #model
 class Model:
-    def __init__(self):
+    def __init__(self,input_size=2,hidden1_size=5,hidden2_size=5,out_size=1,learning_rate=0.001):
         #implemnt the model
-        self.input_size=2
-        self.hidden1_size=5
-        self.hidden2_size=5
-        self.output_size=1
+        self.input_size=input_size
+        self.hidden1_size=hidden1_size
+        self.hidden2_size=hidden2_size
+        self.output_size=out_size
         #weights
         self.weight1=np.random.rand(self.input_size,self.hidden1_size)
         self.weight2=np.random.rand(self.hidden1_size,self.hidden2_size)
@@ -16,7 +17,7 @@ class Model:
         self.bias2=0.001
         self.bias3=0.001
 
-        self.learning_rate=0.001
+        self.learning_rate=learning_rate
 
     def sigmoid(self,x):
         return 1/(1+np.exp(-x))
