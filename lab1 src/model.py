@@ -24,20 +24,22 @@ class Model:
         return 1/(1+np.exp(-x))
     def sigmoid_derivative(self, x):
         return x*(1-x)
-    def ReLu(self,x):
+    def relu(self,x):
         return np.maximum(0,x)
-    def Relu_derivative(self,x):
+    def relu_derivative(self,x):
         return (x>0).astype(float)
     def none(self,x):
         return x
+    def none_derivative(self, x):
+        return np.ones_like(x)
     def forward(self,x):
         #y=wx+b
         if self.activation=="sigmoid":
             act=self.sigmoid
         elif self.activation=="none":
             act=self.none
-        elif self.activation=="ReLu":
-            act=self.ReLu
+        elif self.activation=="relu":
+            act=self.relu
         self.hidden1_output=act(np.dot(x,self.weight1)+self.bias1)
         self.hidden2_output=act(np.dot(self.hidden1_output,self.weight2)+self.bias2)
         self.y=act(np.dot(self.hidden2_output,self.weight3)+self.bias3)
@@ -46,9 +48,9 @@ class Model:
         if self.activation=="sigmoid":
             act=self.sigmoid_derivative
         elif self.activation=="none":
-            act=np.ones_like(x)
-        elif self.activation=="ReLu":
-            act=self.ReLu_derivative
+            act=self.none_derivative
+        elif self.activation=="relu":
+            act=self.relu_derivative
         #gt is the ground truth
         y_error=self.y-y_gt
         y_delta=y_error*act(self.y)

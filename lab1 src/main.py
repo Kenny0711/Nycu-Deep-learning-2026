@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-from data import gernerate_linear, generate_XOR_easy
-from model import Model
+from data import generate_linear, generate_XOR_easy
+from model_question import Model
 #show result
 def show_result(x, y, pred_y):
     import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ with open('config.json','r') as f :
     config = json.load(f)
 print("config:",config)
 if config["data"]=="linear":
-    x, y = gernerate_linear(n=100)
+    x, y = generate_linear(n=100)
 elif config["data"]=="XOR":
     x, y = generate_XOR_easy()
 
@@ -38,7 +38,9 @@ model = Model(
     hidden1_size=config["hidden1_size"],
     hidden2_size=config["hidden2_size"],
     out_size=config["output_size"],
-    learning_rate=config["learning_rate"]
+    learning_rate=config["learning_rate"],
+    activation=config["activation"],
+    optimizer=config["optimizer"]
 )
 # training
 print("########## Training ##########")
@@ -48,7 +50,8 @@ epoch_list = []
 plt.title("Learning Curve")
 for epoch in range(epochs):
     y_test = model.forward(x)
-    loss = model.backward(x, y)
+    loss = model.backward(y)
+    model.update()
     if(epoch % 5000 == 0):
         print(f"epoch: {epoch} loss: {loss}")
     if(epoch % 100 == 0):

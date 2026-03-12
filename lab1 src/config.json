@@ -1,11 +1,11 @@
 {
     "data":"XOR",
     "epoch":100001,
-    "learning_rate":0.001,
+    "learning_rate":0.1,
     "input_size":2,
     "hidden1_size":5,
     "hidden2_size":5,
     "output_size":1,
-    "activation":"none",
-    "optimizer":"no"
+    "activation":"sigmoid",
+    "optimizer":"momentum"
 }
