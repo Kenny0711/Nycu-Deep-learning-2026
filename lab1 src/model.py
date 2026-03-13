@@ -71,5 +71,5 @@ class Model:
         #update weights level1
         self.weight1-=self.learning_rate*np.dot(x.T,hidden1_delta)
         self.bias1-=self.learning_rate*hidden1_delta
-        return (1/2)*np.sum((self.y-y_gt)**2)
+        return np.mean((self.y-y_gt)**2)
     

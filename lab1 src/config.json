@@ -3,8 +3,8 @@
     "epoch":100001,
     "learning_rate":0.1,
     "input_size":2,
-    "hidden1_size":5,
-    "hidden2_size":5,
+    "hidden1_size":4,
+    "hidden2_size":4,
     "output_size":1,
     "activation":"sigmoid",
     "optimizer":"momentum"
