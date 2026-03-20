@@ -1,16 +1,11 @@
 import os
 import torch
 import numpy as np
-
-from torch.utils.data import Dataset
+import random
+from torch.utils.data import DataLoader
 from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-
-train_transform = A.Compose([
-    A.Resize(256, 256),
-    ToTensorV2()
-])
 class OxfordPetDataset(torch.utils.data.Dataset):
     def __init__(self,root,mode="train",transform=None):
         assert mode in{"train","valid","test"}
@@ -35,12 +30,15 @@ class OxfordPetDataset(torch.utils.data.Dataset):
                 part=line.split()
                 all_fname.append(part[0])
         #cut train(80%)&&valid(20%)
-        trainvalid_part=int(len(all_fname)*0.8)
         if self.mode=="test":
-            self.filenames=all_fname
-        elif self.mode=="train":
+            return all_fname
+
+        random.seed(42)
+        random.shuffle(all_fname)
+        trainvalid_part=int(len(all_fname)*0.8)
+        if self.mode=="train":
             self.filenames=all_fname[:trainvalid_part]
-        elif self.mode=="valid":
+        if self.mode=="valid":
             self.filenames=all_fname[trainvalid_part:]
         return self.filenames
     def __len__(self):
@@ -59,6 +57,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
             transformd=self.transform(image=image,mask=mask)
             image=transformd['image']
             mask=transformd['mask']
+        mask = mask.unsqueeze(0)
         picture={"image":image,"mask":mask,"filename":fname}
         return picture
     def preprocess_mask(self,mask):
@@ -66,12 +65,36 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         mask[mask==1.0]=1.0
         mask[(mask==2.0)|(mask==3.0)]=0.0
         return mask
+def load_dataset(args,mode):
+    if mode=='train':
+        transform=A.Compose([
+            A.Resize(256,256),
+            A.HueSaturationValue(p=0.5),
+            A.RandomRotate90(p=0.4),
+            ToTensorV2()
+        ])
+    else:
+        transform=A.Compose([
+            A.Resize(256,256),
+            ToTensorV2()
+        ])
+    dataset=OxfordPetDataset(args.data_path,mode=mode,transform=transform)
+    if mode=='train':
+        shuffle=True
+    else:
+        shuffle=False
+    loader=DataLoader(dataset,batch_size=args.batch_size,shuffle=shuffle)
+    return loader
 #test
 if __name__ == "__main__":
+    transform = A.Compose([
+    A.Resize(256, 256),
+    ToTensorV2()
+])
     dataset = OxfordPetDataset(
         root="../dataset/oxford-iiit-pet",
         mode="train",
-        transform=train_transform
+        transform=transform
     )
     sample = dataset[999]
 

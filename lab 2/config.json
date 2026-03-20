@@ -1,0 +1,7 @@
+{
+    "network": "UNet",
+    "epoch": 100,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "data_path":"dataset"
+}
