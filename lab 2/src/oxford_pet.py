@@ -54,6 +54,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         image=np.array(Image.open(image_path).convert('RGB'))
         mask=np.array(Image.open(mask_path))
         mask = self.preprocess_mask(mask)
+        #change  to Tensor
         if self.transform is not None:
             transformd=self.transform(image=image,mask=mask)
             image=transformd['image']
@@ -72,7 +73,7 @@ if __name__ == "__main__":
         mode="train",
         transform=train_transform
     )
-    sample = dataset[0]
+    sample = dataset[999]
 
     print(type(sample["image"]))
     print(type(sample["mask"]))
