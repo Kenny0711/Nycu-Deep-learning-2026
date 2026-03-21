@@ -57,7 +57,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
             transformd=self.transform(image=image,mask=mask)
             image=transformd['image']
             mask=transformd['mask']
-        mask = mask.unsqueeze(0)
+        mask = mask.unsqueeze(0).float()
         picture={"image":image,"mask":mask,"filename":fname}
         return picture
     def preprocess_mask(self,mask):
@@ -65,7 +65,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         mask[mask==1.0]=1.0
         mask[(mask==2.0)|(mask==3.0)]=0.0
         return mask
-def load_dataset(args,mode):
+def load_dataset(data_path,batch_size,mode):
     if mode=='train':
         transform=A.Compose([
             A.Resize(256,256),
@@ -78,12 +78,20 @@ def load_dataset(args,mode):
             A.Resize(256,256),
             ToTensorV2()
         ])
-    dataset=OxfordPetDataset(args.data_path,mode=mode,transform=transform)
+    dataset=OxfordPetDataset(
+        root=data_path,
+        mode=mode,
+        transform=transform
+        )
     if mode=='train':
         shuffle=True
     else:
         shuffle=False
-    loader=DataLoader(dataset,batch_size=args.batch_size,shuffle=shuffle)
+    loader=DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle
+        )
     return loader
 #test
 if __name__ == "__main__":

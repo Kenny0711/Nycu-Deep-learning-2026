@@ -38,7 +38,7 @@ class UpSample(nn.Module):
     def forward(self,x,feature_map):
         x=self.layer(x)
         return torch.cat((feature_map,x),dim=1)
-class Unet(nn.Module):
+class unet(nn.Module):
     def __init__(self,channel):
         super().__init__()
         self.c1=Conv_Block(channel,64)
@@ -77,5 +77,5 @@ class Unet(nn.Module):
 #test
 if __name__ == '__main__':
    x=torch.randn(2,3,256,256)
-   net=Unet(channel=3)
+   net=unet(channel=3)
    print(net(x).shape)

@@ -1,24 +1,74 @@
+import argparse
+import os
 import torch
-import json
-from torch  import nn,optim
-from torch.utils.data import DataLoader
-from oxford_pet import *
-from model.unet import *
+import numpy as np
+from torch import nn,optim
 from tqdm import tqdm
-def train(config,data_path,model):
-    config["data_path"]=data_path
-    if torch.cuda.is_available():
-        device='cuda'
-    else:
-        device='cpu'
-    print(f"現在使用的設備:{device}")
+from model.unet import* 
+from utils import*
+from oxford_pet import load_dataset
+from evaluate import evaluate
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model_path=os.path.join('./saved_models/train')
-    train_loader=load_dataset(config,mode="train")
-    valid_loader=load_dataset(config,mode="valid")
+
+def get_args():
+   parser=argparse.ArgumentParser(description='Train model')
+   parser.add_argument('--data_path','-p', type=str, default = '../dataset/oxford-iiit-pet', help='data路徑')
+   parser.add_argument('--model','-m',type=str,default='unet',help='unet or resnet')
+   parser.add_argument('--epochs','-e',type=int,default=100,help='epoch數量')
+   parser.add_argument('--batch_size','-b',type=int,default=16,help='batch size')
+   parser.add_argument('--learning_rate','-lr',type=float,default=0.001,help='learing rate')
+   parser.add_argument('--load_model_epoch','-lme',type=int,default=0,help='load model epoch')
+   return parser.parse_args()
+
+def train(args, model):
+    train_loader=load_dataset(
+       data_path=args.data_path,
+       batch_size=args.batch_size,
+       mode="train"
+       )
+    valid_loader=load_dataset(
+       data_path=args.data_path,
+       batch_size=args.batch_size,
+       mode="valid"
+       )
     criterion=nn.BCELoss()
-    optimzer=torch.optim.adam(model.paramter(),lr=config["learning_rate"])
-    scheduler=
+    optimizer=torch.optim.Adam(model.parameters(),lr=args.learning_rate)
+    scheduler=torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.9)
+    losses=[]
+    for epoch in range(args.epochs):
+        model.train()
+        train_loss=0
+        for sample in tqdm(train_loader,desc="Train"):
+           #forward
+           image=sample["image"].float().to(device)
+           mask=sample["mask"].float().to(device)
+           pred_mask=model(image)
+           loss=criterion(pred_mask,mask)
+           #backward
+           optimizer.zero_grad()
+           loss.backward()
+           optimizer.step()
+           train_loss+=loss.item()
+        
+        train_loss=train_loss/len(train_loader)
+        valid_loss,valid_dice=evaluate(model,valid_loader,criterion,device) 
+        scheduler.step()   
+        print ("Test time----------")
+        print(f"Epoch {epoch+1}/{args.epochs}, Train Loss: {train_loss:.4f}, Valid Loss:{valid_loss:.4f}, Valid Dice:{valid_dice:.4f}")  
+        losses.append(train_loss)
+        #save model  
+        save_dir=f"saved_models/{args.model}"
+        os.makedirs(save_dir,exist_ok=True)
+        if(epoch+1)%10 ==0:
+            torch.save(model.state_dict(), os.path.join(save_dir, f"{args.model}_epoch_{epoch+1}.pth"))
+    torch.save(model.state_dict(), os.path.join(save_dir, f"{args.model}_final.pth"))
+    np.save(os.path.join(save_dir, "train_losses.npy"), losses)
 
-if __name__=='__main__':
-   
+if __name__ == "__main__":
+   print("args----------------")
+   args=get_args()
+   print(args)
+   if args.model=="unet":   
+      model = unet(channel=3).to(device)
+   train(args,model)
