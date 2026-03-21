@@ -69,13 +69,16 @@ def load_dataset(data_path,batch_size,mode):
     if mode=='train':
         transform=A.Compose([
             A.Resize(256,256),
-            A.HueSaturationValue(p=0.5),
-            A.RandomRotate90(p=0.4),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(p=0.3),
+            A.HueSaturationValue(p=0.3),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] ),
             ToTensorV2()
         ])
     else:
         transform=A.Compose([
             A.Resize(256,256),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] ),
             ToTensorV2()
         ])
     dataset=OxfordPetDataset(
@@ -90,24 +93,7 @@ def load_dataset(data_path,batch_size,mode):
     loader=DataLoader(
         dataset,
         batch_size=batch_size,
+        num_workers=8,
         shuffle=shuffle
         )
     return loader
-#test
-if __name__ == "__main__":
-    transform = A.Compose([
-    A.Resize(256, 256),
-    ToTensorV2()
-])
-    dataset = OxfordPetDataset(
-        root="../dataset/oxford-iiit-pet",
-        mode="train",
-        transform=transform
-    )
-    sample = dataset[999]
-
-    print(type(sample["image"]))
-    print(type(sample["mask"]))
-    print(sample["image"].shape)
-    print(sample["mask"].shape)
-    print(sample["filename"])

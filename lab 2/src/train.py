@@ -8,6 +8,8 @@ from model.unet import*
 from utils import*
 from oxford_pet import load_dataset
 from evaluate import evaluate
+import warnings
+warnings.filterwarnings("ignore")
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -32,9 +34,9 @@ def train(args, model):
        batch_size=args.batch_size,
        mode="valid"
        )
-    criterion=nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer=torch.optim.Adam(model.parameters(),lr=args.learning_rate)
-    scheduler=torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.9)
+    scheduler=torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
     losses=[]
     for epoch in range(args.epochs):
         model.train()

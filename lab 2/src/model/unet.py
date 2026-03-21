@@ -5,13 +5,13 @@ class Conv_Block(nn.Module):
     def __init__(self,in_channel,out_channel):
         super().__init__()
         self.layer=nn.Sequential(
-            nn.Conv2d(in_channel,out_channel,3,1,1,padding_mode='reflect',bias=False),
+            nn.Conv2d(in_channel,out_channel,3,1,1,bias=False),
             nn.BatchNorm2d(out_channel),
-            nn.Dropout2d(0.3),
+            nn.Dropout2d(0.1),
             nn.LeakyReLU(),
-            nn.Conv2d(out_channel,out_channel,3,1,1,padding_mode='reflect',bias=False),
+            nn.Conv2d(out_channel,out_channel,3,1,1,bias=False),
             nn.BatchNorm2d(out_channel),
-            nn.Dropout2d(0.3),
+            nn.Dropout2d(0.1),
             nn.LeakyReLU()
         ) 
     def forward(self,x):
@@ -21,7 +21,7 @@ class DownSample(nn.Module):
     def __init__(self,channel):
         super().__init__()
         self.layer=nn.Sequential(
-            nn.Conv2d(channel,channel,3,2,1,padding_mode='reflect',bias=False),
+            nn.Conv2d(channel,channel,3,2,1,bias=False),
             nn.BatchNorm2d(channel),
             nn.LeakyReLU()
         )
@@ -60,7 +60,6 @@ class unet(nn.Module):
         self.u4=UpSample(128)
         self.c9=Conv_Block(128,64)
         self.out=nn.Conv2d(64,1,3,1,1)
-        self.sigmoid=nn.Sigmoid()
 
 
     def forward(self,x):
@@ -73,9 +72,4 @@ class unet(nn.Module):
         Output_two=self.c7(self.u2(Output_one,R3))
         Output_three=self.c8(self.u3(Output_two,R2))
         Output_four=self.c9(self.u4(Output_three,R1))
-        return self.sigmoid(self.out(Output_four))
-#test
-if __name__ == '__main__':
-   x=torch.randn(2,3,256,256)
-   net=unet(channel=3)
-   print(net(x).shape)
+        return self.out(Output_four)
