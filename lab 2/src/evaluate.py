@@ -13,7 +13,6 @@ def evaluate(model, valid_loader, criterion, device):
             pred_mask = model(image)
             loss = criterion(pred_mask, mask)
             valid_loss += loss.item()
-            pred_mask=torch.sigmoid(pred_mask)
             valid_dice+=dice_score(pred_mask,mask)
 
     valid_loss = valid_loss / len(valid_loader)
