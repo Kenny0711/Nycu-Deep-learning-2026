@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from model.unet import* 
+from model.resnet34_unet import*
 from utils import*
 from evaluate import evaluate
 from oxford_pet import load_dataset
@@ -12,12 +13,11 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def get_args():
    parser=argparse.ArgumentParser(description='Train model')
-   parser.add_argument('--data_path','-p', type=str, default = '../dataset/oxford-iiit-pet', help='data路徑')
-   parser.add_argument('--model','-m',type=str,default='unet',help='unet or resnet')
-   parser.add_argument('--epochs','-e',type=int,default=100,help='epoch數量')
-   parser.add_argument('--batch_size','-b',type=int,default=16,help='batch size')
-   parser.add_argument('--learning_rate','-lr',type=float,default=0.001,help='learing rate')
-   parser.add_argument('--load_model_epoch','-lme',type=int,default=0,help='load model epoch')
+   parser.add_argument('--data_path','-p', type=str, default = '../dataset/oxford-iiit-pet')
+   parser.add_argument('--model','-m',type=str,default='unet')
+   parser.add_argument('--epochs','-e',type=int,default=100)
+   parser.add_argument('--batch_size','-b',type=int,default=16)
+   parser.add_argument('--learning_rate','-lr',type=float,default=0.001)
    return parser.parse_args()
 
 def train(args, model):
@@ -32,7 +32,7 @@ def train(args, model):
        mode="valid"
        )
     criterion=bce_dice_loss
-    optimizer=torch.optim.Adam(model.parameters(),lr=args.learning_rate)
+    optimizer=torch.optim.AdamW(model.parameters(),lr=args.learning_rate,weight_decay=1e-4)
     scheduler=torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.99)
     #record loss and best dice
     losses=[]
@@ -77,4 +77,6 @@ if __name__ == "__main__":
    print(args)
    if args.model=="unet":   
       model = unet(channel=3).to(device)
+   if args.model=="resnet34_unet":
+      model=resnet34_unet(channel=3).to(device)
    train(args,model)
