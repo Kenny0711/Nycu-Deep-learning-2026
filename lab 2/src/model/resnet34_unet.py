@@ -1,6 +1,49 @@
 import torch
 import torch.nn as nn
 from model.unet import Conv_Block,UpSample
+class CBAM(nn.Module):
+    def __init__(self, in_channel,reduction=16,kernel_size=7):
+        super().__init__()
+        #channel attention model
+        self.max_pool=nn.AdaptiveMaxPool2d(1)
+        self.avg_pool=nn.AdaptiveAvgPool2d(1)
+        self.mlp=nn.Sequential(
+            nn.Conv2d(in_channel,in_channel//reduction,kernel_size=1,bias=False),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(in_channel//reduction,in_channel,kernel_size=1,bias=False),
+        )
+        #spatial
+        self.spatial_conv=nn.Conv2d(
+            in_channels=2,
+            out_channels=1,
+            kernel_size=kernel_size,
+            padding=kernel_size//2,
+            bias=False
+            )
+        
+        
+    
+    def forward(self,x):
+        #channel attention
+        pool_max=self.max_pool(x)
+        pool_avg=self.avg_pool(x)
+
+        avg_out=self.mlp(pool_avg)
+        max_out=self.mlp(pool_max)
+
+        channel_att=torch.sigmoid(avg_out+max_out)
+        x=x*channel_att
+        #spatial
+        max_pool_spatial,_=torch.max(x,dim=1,keepdim=True)
+        avg_pool_spatial=torch.mean(x,dim=1,keepdim=True)
+        spatial_input=torch.cat([max_pool_spatial,avg_pool_spatial],dim=1)
+        channel_output=self.spatial_conv(spatial_input)
+        out=torch.sigmoid(channel_output)
+        x=x*out
+        return x
+
+
+
 class resnet34_block(nn.Module):
     def __init__(self,in_channel,out_channel,stride=1,shortcut=None):
         super().__init__()
@@ -49,12 +92,20 @@ class resnet34_unet(nn.Module):
         #unet decoder
         self.u1=UpSample(512,256)
         self.c6=Conv_Block(512,256)
+        self.cbam1=CBAM(256)
+
         self.u2=UpSample(256,128)
         self.c7=Conv_Block(256,128)
+        self.cbam2=CBAM(128)
+
         self.u3=UpSample(128,64)
         self.c8=Conv_Block(128,64)
+        self.cbam3=CBAM(64)
+
         self.u4=UpSample(64,64)
         self.c9=Conv_Block(128,64)
+        self.cbam4=CBAM(64)
+
         self.final = nn.ConvTranspose2d(64, 64, kernel_size=2, stride=2)
         self.out=nn.Conv2d(64,1,1)
     def _make_layer(self,in_channel,out_channel,block,stride,is_shortcut=True):
@@ -79,9 +130,16 @@ class resnet34_unet(nn.Module):
         R5=self.layer4(R4)
         #unet
         Output_one=self.c6(self.u1(R5,R4))
+        Output_one=self.cbam1(Output_one)
+
         Output_two=self.c7(self.u2(Output_one,R3))
+        Output_two=self.cbam2(Output_two)
+
         Output_three=self.c8(self.u3(Output_two,R2))
+        Output_three=self.cbam3(Output_three)
+
         Output_four=self.c9(self.u4(Output_three,R1))
+        Output_four=self.cbam4(Output_four)
         #output
         out=self.final(Output_four)
         return self.out(out)    

@@ -20,8 +20,10 @@ class OxfordPetDataset(torch.utils.data.Dataset):
     def read_split(self):
         if self.mode=="test":
             txt_dir=os.path.join(self.root,"annotations","test.txt")
-        else:
-            txt_dir=os.path.join(self.root,"annotations","trainval.txt")
+        elif self.mode=="train":
+            txt_dir=os.path.join(self.root,"annotations","train.txt")
+        elif self.mode=="valid":
+            txt_dir=os.path.join(self.root,"annotations","valid.txt")
         all_fname=[]
         #dog_1 1 1 1 ->dog_1
         with open(txt_dir,"r") as f:
@@ -30,17 +32,16 @@ class OxfordPetDataset(torch.utils.data.Dataset):
                 part=line.split()
                 all_fname.append(part[0])
         #cut train(80%)&&valid(20%)
-        if self.mode=="test":
-            return all_fname
+        #if self.mode=="test":
+        return all_fname
 
-        random.seed(42)
-        random.shuffle(all_fname)
-        trainvalid_part=int(len(all_fname)*0.8)
-        if self.mode=="train":
-            self.filenames=all_fname[:trainvalid_part]
-        if self.mode=="valid":
-            self.filenames=all_fname[trainvalid_part:]
-        return self.filenames
+        # random.seed(42)
+        # random.shuffle(all_fname)
+        # trainvalid_part=int(len(all_fname)*0.8)
+        # if self.mode=="train":
+        #     return all_fname[:trainvalid_part]
+        # if self.mode=="valid":
+        #     return all_fname[trainvalid_part:]
     def __len__(self):
         return len(self.filenames)
     def __getitem__(self, index):
@@ -51,6 +52,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         #image ->RGB
         image=np.array(Image.open(image_path).convert('RGB'))
         mask=np.array(Image.open(mask_path))
+        orig_h, orig_w = image.shape[:2]
         mask = self.preprocess_mask(mask)
         #change  to Tensor
         if self.transform is not None:
@@ -58,7 +60,13 @@ class OxfordPetDataset(torch.utils.data.Dataset):
             image=transformd['image']
             mask=transformd['mask']
         mask = mask.unsqueeze(0).float()
-        picture={"image":image,"mask":mask,"filename":fname}
+        picture={
+            "image":image,
+            "mask":mask,
+            "filename":fname,
+            "orig_h": orig_h, 
+            "orig_w": orig_w
+            }
         return picture
     def preprocess_mask(self,mask):
         mask=mask.astype(np.float32)
