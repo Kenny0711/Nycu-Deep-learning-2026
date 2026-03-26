@@ -77,12 +77,18 @@ class OxfordPetDataset(torch.utils.data.Dataset):
 def load_dataset(data_path,batch_size,mode):
     if mode=='train':
         transform=A.Compose([
-            A.Resize(256,256),
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(p=0.3),
-            A.HueSaturationValue(p=0.3),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] ),
-            ToTensorV2()
+        A.Resize(256, 256),
+        A.HorizontalFlip(p=0.5),
+        A.ShiftScaleRotate(
+            shift_limit=0.05,
+            scale_limit=0.1,
+            rotate_limit=15,
+            border_mode=0,
+            p=0.5
+        ),
+        A.RandomBrightnessContrast(p=0.3),
+        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ToTensorV2()
         ])
     else:
         transform=A.Compose([
