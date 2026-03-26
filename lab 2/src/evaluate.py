@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm 
 from utils import *
-def evaluate(model, valid_loader, criterion, device):
+def evaluate(model, valid_loader, criterion, threshold,device):
     model.eval()
     valid_loss = 0
     valid_dice=0
@@ -13,7 +13,7 @@ def evaluate(model, valid_loader, criterion, device):
             pred_mask = model(image)
             loss = criterion(pred_mask, mask)
             valid_loss += loss.item()
-            valid_dice+=dice_score(pred_mask,mask)
+            valid_dice+=dice_score(pred_mask,mask,threshold=threshold)
 
     valid_loss = valid_loss / len(valid_loader)
     valid_dice = valid_dice / len(valid_loader)

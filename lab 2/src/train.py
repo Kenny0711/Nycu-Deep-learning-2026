@@ -18,6 +18,7 @@ def get_args():
    parser.add_argument('--epochs','-e',type=int,default=100)
    parser.add_argument('--batch_size','-b',type=int,default=16)
    parser.add_argument('--learning_rate','-lr',type=float,default=0.001)
+   parser.add_argument('--threshold', '-t', type=float, default=0.5)
    return parser.parse_args()
 
 def train(args, model):
@@ -53,7 +54,7 @@ def train(args, model):
          train_loss+=loss.item()
         
       train_loss=train_loss/len(train_loader)
-      valid_loss,valid_dice=evaluate(model,valid_loader,criterion,device) 
+      valid_loss,valid_dice=evaluate(model,valid_loader,criterion,args.threshold,device) 
       scheduler.step()   
       print ("Valid time----------")
       print(f"Epoch {epoch+1}/{args.epochs}, Train Loss: {train_loss:.4f}, Valid Loss:{valid_loss:.4f}, Valid Dice:{valid_dice:.4f}")  

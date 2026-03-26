@@ -52,6 +52,7 @@ class OxfordPetDataset(torch.utils.data.Dataset):
         #image ->RGB
         image=np.array(Image.open(image_path).convert('RGB'))
         mask=np.array(Image.open(mask_path))
+        #
         orig_h, orig_w = image.shape[:2]
         mask = self.preprocess_mask(mask)
         #change  to Tensor
