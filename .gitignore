@@ -2,3 +2,10 @@
 **/saved_models/
 **/*.pth
 **/*.tar.gz
+**/*.zip
+**/__pycache__/
+**/*.pyc
+**/lab3_dataset*
+**/test_results/
+**/transformer_checkpoints/
+**/kenny/
