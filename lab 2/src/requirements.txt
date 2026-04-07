@@ -1,0 +1,6 @@
+torch
+numpy
+tqdm
+opencv-python
+Pillow
+albumentations

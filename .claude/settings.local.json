@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(robocopy \"C:\\\\Nycu Deep learning 2026\" \"C:\\\\Users\\\\kenny\\\\OneDrive\\\\桌面\\\\Nycu Deep learning 2026\" /E /XD .git /NFL /NDL /NJH /NJS)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(cmd /c \"robocopy \\\\\"C:\\\\Nycu Deep learning 2026\\\\\" \\\\\"C:\\\\Users\\\\kenny\\\\OneDrive\\\\桌面\\\\Nycu Deep learning 2026\\\\\" /E /XD .git /NFL /NDL /NJH /NJS\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(powershell:*)",
+      "Bash(fid_sweet)",
+      "Bash(imga)",
+      "Bash(test_results)",
+      "Bash(mask_scheduling\")"
+    ]
+  }
+}
