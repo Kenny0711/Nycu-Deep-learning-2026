@@ -1,6 +1,7 @@
 **/dataset/
 **/saved_models/
 **/*.pth
+**/*.pt
 **/*.tar.gz
 **/*.zip
 **/__pycache__/
@@ -9,3 +10,5 @@
 **/test_results/
 **/transformer_checkpoints/
 **/kenny/
+**/LAB4_Dataset*/
+**/.claude/

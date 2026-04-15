@@ -1,7 +1,0 @@
-lab3_dataset/
-models/VQGAN/checkpoints/
-transformer_checkpoints/
-*.pt
-transformer_checkpts/
-__pycache__/
-*.zip
