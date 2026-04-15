@@ -9,7 +9,9 @@
       "Bash(fid_sweet)",
       "Bash(imga)",
       "Bash(test_results)",
-      "Bash(mask_scheduling\")"
+      "Bash(mask_scheduling\")",
+      "Bash(du -sh \"lab 3/Lab3_code/models/VQGAN/checkpoints/VQGAN.pt\")",
+      "Bash(du -sh \"lab 4/nycu-dl-2026-spring-lab-4/LAB4_Dataset\")"
     ]
   }
 }
