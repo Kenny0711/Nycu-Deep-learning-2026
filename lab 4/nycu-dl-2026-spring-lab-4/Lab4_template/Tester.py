@@ -10,7 +10,7 @@ from modules import Generator, Gaussian_Predictor, Decoder_Fusion, Label_Encoder
 from torchvision.utils import save_image
 from torch import stack
 
-import imageio
+#import imageio
 from math import log10
 from Trainer import VAE_Model
 import glob
@@ -27,7 +27,7 @@ TA_ = """
 """
 
 def get_key(fp):
-    filename = fp.split('/')[-1]
+    filename = os.path.basename(fp)
     filename = filename.split('.')[0].replace('frame', '')
     return int(filename)
 
@@ -44,7 +44,7 @@ class Dataset_Dance(torchData):
         self.img_folder = []
         self.label_folder = []
         
-        data_num = len(glob('./Demo_Test/*'))
+        data_num = 5
         for i in range(data_num):
             self.img_folder.append(sorted(glob(os.path.join(root , f'test/test_img/{i}/*')), key=get_key))
             self.label_folder.append(sorted(glob(os.path.join(root , f'test/test_label/{i}/*')), key=get_key))
@@ -93,6 +93,9 @@ class Test_model(VAE_Model):
             
     @torch.no_grad()
     def eval(self):
+        #
+        nn.Module.eval(self)
+        #
         val_loader = self.val_dataloader()
         pred_seq_list = []
         for idx, (img, label) in enumerate(tqdm(val_loader, ncols=80)):
@@ -120,12 +123,22 @@ class Test_model(VAE_Model):
         # label_list is used to store the label seq
         # Both list will be used to make gif
         decoded_frame_list = [img[0].cpu()]
-        label_list = []
-
+        label_list = [label[0].cpu()]
+        prev_x=img[0]
         # TODO
-        raise NotImplementedError
-            
-        
+        for t in range(1,label.shape[0]):
+            x=self.frame_transformation(prev_x)
+            p=self.label_transformation(label[t])
+            z=torch.zeros(x.shape[0],self.args.N_dim,x.shape[2],x.shape[3]).to(prev_x.device)
+
+            z_fusion=self.Decoder_Fusion(x,p,z)
+            x2_hat=self.Generator(z_fusion)
+            x2_hat = torch.sigmoid(x2_hat)
+
+            decoded_frame_list.append(x2_hat.cpu())
+            label_list.append(label[t].cpu())
+            prev_x=x2_hat.detach()
+        #
         # Please do not modify this part, it is used for visulization
         generated_frame = stack(decoded_frame_list).permute(1, 0, 2, 3, 4)
         label_frame = stack(label_list).permute(1, 0, 2, 3, 4)
@@ -188,8 +201,8 @@ if __name__ == '__main__':
     parser.add_argument('--no_sanity',     action='store_true')
     parser.add_argument('--test',          action='store_true')
     parser.add_argument('--make_gif',      action='store_true')
-    parser.add_argument('--DR',            type=str, required=True,  help="Your Dataset Path")
-    parser.add_argument('--save_root',     type=str, required=True,  help="The path to save your data")
+    parser.add_argument('--DR',            type=str,default='../LAB4_Dataset',  help="Your Dataset Path")
+    parser.add_argument('--save_root',     type=str, default='../output',  help="The path to save your data")
     parser.add_argument('--num_workers',   type=int, default=4)
     parser.add_argument('--num_epoch',     type=int, default=70,     help="number of total epoch")
     parser.add_argument('--per_save',      type=int, default=3,      help="Save checkpoint every seted epoch")
@@ -210,7 +223,7 @@ if __name__ == '__main__':
     parser.add_argument('--tfr',           type=float, default=1.0,  help="The initial teacher forcing ratio")
     parser.add_argument('--tfr_sde',       type=int,   default=10,   help="The epoch that teacher forcing ratio start to decay")
     parser.add_argument('--tfr_d_step',    type=float, default=0.1,  help="Decay step that teacher forcing ratio adopted")
-    parser.add_argument('--ckpt_path',     type=str,    default=None,help="The path of your checkpoints")   
+    parser.add_argument('--ckpt_path',     type=str,    default='saved_model/best_model.ckpt',help="The path of your checkpoints")   
     
     # Training Strategy
     parser.add_argument('--fast_train',         action='store_true')

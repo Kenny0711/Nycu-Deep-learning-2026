@@ -85,7 +85,7 @@ class VAE_Model(nn.Module):
         self.Generator            = Generator(input_nc=args.D_out_dim, output_nc=3)
         
         self.optim      = optim.Adam(self.parameters(), lr=self.args.lr)
-        self.scheduler  = optim.lr_scheduler.MultiStepLR(self.optim, milestones=[2, 5], gamma=0.1)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, T_max=args.num_epoch)
         self.kl_annealing = kl_annealing(args, current_epoch=0)
         self.mse_criterion = nn.MSELoss()
         self.current_epoch = 0
@@ -98,13 +98,19 @@ class VAE_Model(nn.Module):
         self.train_vi_len = args.train_vi_len
         self.val_vi_len   = args.val_vi_len
         self.batch_size = args.batch_size
+        #
         self.writer = SummaryWriter(args.save_root)
-    
+        self.best_psnr=0
+        #
     def forward(self, img, label):
         pass
     
     def training_stage(self):
+
         for i in range(self.args.num_epoch):
+            #
+            self.train()
+            #
             train_loader = self.train_dataloader()
             adapt_TeacherForcing = True if random.random() < self.tfr else False
 
@@ -121,8 +127,18 @@ class VAE_Model(nn.Module):
                 
             if self.current_epoch % self.args.per_save == 0:
                 self.save(os.path.join(self.args.save_root, f"epoch={self.current_epoch}.ckpt"))
-                
-            self.eval()
+            #Tensorboard Beta
+            current_beta = self.kl_annealing.get_beta()
+            self.writer.add_scalar('Parameters/KL_Beta', current_beta, self.current_epoch)
+            #儲存為 best_model.ckpt
+            current_psnr = self.eval()
+            if current_psnr > self.best_psnr:
+                self.best_psnr = current_psnr
+                self.save(os.path.join(self.args.save_root, "best_model.ckpt"))
+                print(f"\n[★] New Best PSNR: {self.best_psnr:.4f}! Model saved to best_model.ckpt")
+            
+            self.writer.add_scalar('val/best_psnr', self.best_psnr, self.current_epoch)
+            #
             self.current_epoch += 1
             self.scheduler.step()
             self.teacher_forcing_ratio_update()
@@ -131,24 +147,24 @@ class VAE_Model(nn.Module):
             
     @torch.no_grad()
     def eval(self):
+        super().eval()
         val_loader = self.val_dataloader()
-        writer_info = {'mse':0, 'psnr':0, 'kl':0}
+        writer_info = {'mse':0, 'psnr':0}
         for (img, label) in (pbar := tqdm(val_loader, ncols=120)):
             img = img.to(self.args.device)
             label = label.to(self.args.device)
-            mse,psnr,kl = self.val_one_step(img, label)
+            mse,psnr = self.val_one_step(img, label)
+            #
             self.tqdm_bar('val', pbar, mse.detach().cpu(), lr=self.scheduler.get_last_lr()[0])
             writer_info['mse'] += mse.detach().cpu()
             writer_info['psnr'] += psnr.detach().cpu()
-            writer_info['kl'] += kl.detach().cpu()
         writer_info['mse'] /= len(val_loader)
         writer_info['psnr'] /= len(val_loader)
-        writer_info['kl'] /= len(val_loader)
         self.writer.add_scalar('val/mse', writer_info['mse'], self.current_epoch)
         self.writer.add_scalar('val/psnr', writer_info['psnr'], self.current_epoch)
-        self.writer.add_scalar('val/kl', writer_info['kl'], self.current_epoch)
-        
-    
+        #
+        return writer_info['psnr']
+        #
     def training_one_step(self, img, label, adapt_TeacherForcing):
         # TODO
         total_mse_loss=0.0
@@ -173,13 +189,16 @@ class VAE_Model(nn.Module):
             
             z_fusion=self.Decoder_Fusion(x1,p2,z)
             x2_hat=self.Generator(z_fusion)
-            
+            x2_hat = torch.sigmoid(x2_hat)
+
             mse_loss=self.mse_criterion(x2_hat,x2_input)
             total_mse_loss+=mse_loss
 
-            prev_x=x2_hat
+            prev_x=x2_hat.detach()
         
         self.optim.zero_grad()
+        total_kl_loss /= (sequence - 1)
+        total_mse_loss /= (sequence - 1)
         total_loss=total_kl_loss*self.kl_annealing.get_beta()+total_mse_loss
         total_loss.backward()
         self.optimizer_step()
@@ -187,39 +206,36 @@ class VAE_Model(nn.Module):
         
     @torch.no_grad()
     def val_one_step(self, img, label):
-        # TODO123333
-        total_kl_loss=0.0
+        # TODO
         total_mse_loss=0.0
         total_psnr=0.0
         psnr_list=[]
+
         prev_x=img[:,0]
         sequence=self.val_vi_len
+
         for t in range(1,sequence):
             x1_input=prev_x
             p2_input=label[:,t]
-            x2_input=img[:,t]
+            x2_target=img[:,t]
             p2=self.label_transformation(p2_input)
             x1=self.frame_transformation(x1_input)
-            x2=self.frame_transformation(x2_input)
-            z,mu,logvar=self.Gaussian_Predictor(x2,p2)
+            z = torch.zeros(img.shape[0], self.args.N_dim, x1.shape[2], x1.shape[3]).to(img.device)
             
-            kl_loss=kl_criterion(mu,logvar,self.batch_size)
-            total_kl_loss+=kl_loss
             
             z_fusion=self.Decoder_Fusion(x1,p2,z)
             x2_hat=self.Generator(z_fusion)
-            
-            mse_loss=self.mse_criterion(x2_hat,x2_input)
-            total_mse_loss+=mse_loss
+            x2_hat = torch.sigmoid(x2_hat)
 
-            psnr=Generate_PSNR(x2_hat,x2)
+            mse_loss=self.mse_criterion(x2_hat,x2_target)
+            total_mse_loss+=mse_loss
+            psnr = Generate_PSNR(x2_hat, x2_target)
             psnr_list.append(psnr.cpu().numpy())
             total_psnr+=psnr
 
-            prev_x=x2_hat
-        total_mse_loss /= (self.val_vi_len - 1)
-        total_kl_loss /= (self.val_vi_len - 1)
-        total_psnr /= (self.val_vi_len - 1)
+            prev_x=x2_hat.detach()
+        total_mse_loss /= (sequence - 1)
+        total_psnr /= (sequence - 1)
 
         plt.plot(psnr_list, label="PSNR per frame")
         plt.xlabel("Frame Index")
@@ -228,7 +244,7 @@ class VAE_Model(nn.Module):
         plt.legend()
         plt.savefig(os.path.join(self.args.save_root, f"psnr_epoch_latest.png"))
         plt.close()
-        return total_mse_loss,total_psnr,total_kl_loss
+        return total_mse_loss,total_psnr
                 
     def make_gif(self, images_list, img_name):
         new_list = []
@@ -297,7 +313,7 @@ class VAE_Model(nn.Module):
             self.tfr = checkpoint['tfr']
             
             self.optim      = optim.Adam(self.parameters(), lr=self.args.lr)
-            self.scheduler  = optim.lr_scheduler.MultiStepLR(self.optim, milestones=[2, 4], gamma=0.1)
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optim, T_max=args.num_epoch)
             self.kl_annealing = kl_annealing(self.args, current_epoch=checkpoint['last_epoch'])
             self.current_epoch = checkpoint['last_epoch']
 
@@ -322,7 +338,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('--batch_size',    type=int,    default=2)
+    parser.add_argument('--batch_size',    type=int,    default=4)
     parser.add_argument('--lr',            type=float,  default=0.0001,     help="initial learning rate")
     parser.add_argument('--device',        type=str, choices=["cuda", "cpu"], default="cuda")
     parser.add_argument('--optim',         type=str, choices=["Adam", "AdamW"], default="Adam")
@@ -332,8 +348,8 @@ if __name__ == '__main__':
     parser.add_argument('--DR',            type=str,default="../LAB4_Dataset",   help="Your Dataset Path")
     parser.add_argument('--save_root',     type=str, default="saved_model" , help="The path to save your data")
     parser.add_argument('--num_workers',   type=int, default=4)
-    parser.add_argument('--num_epoch',     type=int, default=70,     help="number of total epoch")
-    parser.add_argument('--per_save',      type=int, default=3,      help="Save checkpoint every seted epoch")
+    parser.add_argument('--num_epoch',     type=int, default=200,     help="number of total epoch")
+    parser.add_argument('--per_save',      type=int, default=10,      help="Save checkpoint every seted epoch")
     parser.add_argument('--partial',       type=float, default=1.0,  help="Part of the training dataset to be trained")
     parser.add_argument('--train_vi_len',  type=int, default=16,     help="Training video length")
     parser.add_argument('--val_vi_len',    type=int, default=630,    help="valdation video length")
@@ -360,7 +376,7 @@ if __name__ == '__main__':
     
     # Kl annealing stratedy arguments
     parser.add_argument('--kl_anneal_type',     type=str, default='Cyclical',       help="")
-    parser.add_argument('--kl_anneal_cycle',    type=int, default=10,               help="")
+    parser.add_argument('--kl_anneal_cycle',    type=int, default=20,               help="")
     parser.add_argument('--kl_anneal_ratio',    type=float, default=0.5,              help="")
     
 
