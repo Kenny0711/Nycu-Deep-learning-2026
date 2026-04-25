@@ -14,3 +14,4 @@
 **/.claude/
 **/events.out.tfevents*
 **/*.ckpt
+**/submission.csv
