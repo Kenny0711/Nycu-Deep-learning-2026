@@ -15,3 +15,7 @@
 **/events.out.tfevents*
 **/*.ckpt
 **/submission.csv
+*.gif
+**/*.png
+**/*.jpg
+**/*.jpeg
