@@ -10,6 +10,8 @@
 - [Lab 2 — Binary Semantic Segmentation](#lab-2--binary-semantic-segmentation)
 - [Lab 3 — MaskGIT for Image Inpainting](#lab-3--maskgit-for-image-inpainting)
 - [Lab 4 — Conditional VAE for Video Prediction](#lab-4--conditional-vae-for-video-prediction)
+- [Lab 5 — Deep Q-Network (DQN)](#lab-5--deep-q-network-dqn)
+- [Final Project — SUMO Traffic Simulation with LCPO](#final-project--sumo-traffic-simulation-with-lcpo)
 
 ---
 
@@ -110,3 +112,50 @@
 | `Lab4_template/dataloader.py` | Dance video dataset loader (frames + pose labels) |
 | `Lab4_template/modules/modules.py` | Gaussian_Predictor, Decoder_Fusion, kl_annealing |
 | `Lab4_template/modules/layers.py` | Encoder/Decoder layer implementations |
+
+---
+
+## Lab 5 — Deep Q-Network (DQN)
+
+**Goal:** Implement DQN and its variants to solve discrete control tasks.
+
+### Framework
+- PyTorch
+
+### What was done
+- Implemented DQN with experience replay and target network
+- Extended to multiple task variants (Task 2, Task 3)
+- Evaluated agent performance with recorded evaluation videos
+
+### Key Files
+
+| File | Description |
+|------|-------------|
+| `dqn.py` | Main DQN implementation |
+| `dqn_task2.py` | DQN variant for Task 2 |
+| `dqn_task3.py` | DQN variant for Task 3 |
+| `test_model.py` | Model evaluation and video recording |
+| `eval_videos/` | Recorded evaluation episodes (MP4) |
+
+---
+
+## Final Project — SUMO Traffic Simulation with LCPO
+
+**Goal:** Apply reinforcement learning to traffic signal control using SUMO (Simulation of Urban MObility) with a Taipei road network.
+
+### Framework
+- Python + SUMO
+
+### What was done
+- Built a SUMO traffic simulation environment for Taipei road topology
+- Implemented traffic signal control with RL agents
+- Crawled real Taipei road data via TDX API for network construction
+
+### Key Files
+
+| File | Description |
+|------|-------------|
+| `final/sumo_taipei/sumo_scene_builder.py` | Builds SUMO network from Taipei road data |
+| `final/sumo_taipei/run_simulation.py` | Runs traffic simulation with RL agent |
+| `final/sumo_taipei/tdx_crawler.py` | Crawls Taipei road data from TDX API |
+| `final/sumo_taipei/nets/` | SUMO network config files (cross, taipei route) |
