@@ -20,3 +20,6 @@
 **/*.jpg
 **/*.jpeg
 **/wandb/
+**/venv/
+lab 5/dL_lab5/
+**/*.npy

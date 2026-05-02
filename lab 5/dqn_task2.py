@@ -141,9 +141,12 @@ class DQNAgent:
         self.batch_size = args.batch_size
         self.gamma = args.discount_factor
         self.epsilon = args.epsilon_start
-        self.epsilon_decay = args.epsilon_decay
+       # self.epsilon_decay = args.epsilon_decay
         self.epsilon_min = args.epsilon_min
-
+        #
+        self.epsilon_decay_steps = args.epsilon_decay_steps
+        self.epsilon_decrement = (args.epsilon_start - args.epsilon_min) / self.epsilon_decay_steps
+        #
         self.env_count = 0
         self.train_count = 0
         self.best_reward = -21  # Initilized to 0 for CartPole and to -21 for Pong
@@ -179,7 +182,7 @@ class DQNAgent:
                 done = terminated or truncated
                 
                 next_state = self.preprocessor.step(next_obs)
-                self.memory.append((state, action, reward, next_state, done))
+                self.memory.append((state, action, reward, next_state, terminated))
 
                 for _ in range(self.train_per_step):
                     self.train()
@@ -241,23 +244,42 @@ class DQNAgent:
                     "Eval Reward": eval_reward
                 })
 
-    def evaluate(self):
-        obs, _ = self.test_env.reset()
-        state = self.preprocessor.reset(obs)
-        done = False
-        total_reward = 0
+    # def evaluate(self, episodes=20):
+    #     obs, _ = self.test_env.reset()
+    #     state = self.preprocessor.reset(obs)
+    #     done = False
+    #     total_reward = 0
 
-        while not done:
-            state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
-            with torch.no_grad():
-                action = self.q_net(state_tensor).argmax().item()
-            next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
-            done = terminated or truncated
-            total_reward += reward
-            state = self.preprocessor.step(next_obs)
+    #     while not done:
+    #         state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
+    #         with torch.no_grad():
+    #             action = self.q_net(state_tensor).argmax().item()
+    #         next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
+    #         done = terminated or truncated
+    #         total_reward += reward
+    #         state = self.preprocessor.step(next_obs)
 
-        return total_reward
+    #     return total_reward
+    def evaluate(self, num_episodes=20):
+        total_rewards = []
+        for _ in range(num_episodes):
+            obs, _ = self.test_env.reset()
+            state = self.preprocessor.reset(obs)
+            done = False
+            total_reward = 0
 
+            while not done:
+                state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    action = self.q_net(state_tensor).argmax().item()
+                next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
+                done = terminated or truncated
+                total_reward += reward
+                state = self.preprocessor.step(next_obs)
+
+            total_rewards.append(total_reward)
+
+        return np.mean(total_rewards)
 
     def train(self):
 
@@ -266,7 +288,8 @@ class DQNAgent:
         
         # Decay function for epsilin-greedy exploration
         if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            self.epsilon -= self.epsilon_decrement
+            self.epsilon = max(self.epsilon, self.epsilon_min)
         self.train_count += 1
        
         ########## YOUR CODE HERE (<5 lines) ##########
@@ -290,7 +313,7 @@ class DQNAgent:
         # Implement the loss function of DQN asnd the gradient updates 
         with torch.no_grad():
             target_q_val = rewards + self.gamma * (1 - dones) * self.target_net(next_states).max(1)[0]
-        loss = nn.functional.mse_loss(q_values, target_q_val) 
+        loss = nn.functional.mse_loss(q_values, target_q_val)
 
         self.optimizer.zero_grad()   
         loss.backward()             
@@ -317,12 +340,14 @@ if __name__ == "__main__":
     parser.add_argument("--memory-size", type=int, default=100000)
     parser.add_argument("--lr", type=float, default=0.0005)
     parser.add_argument("--discount-factor", type=float, default=0.99)
+    parser.add_argument("--num-episodes", type=int, default=5000)
     parser.add_argument("--epsilon-start", type=float, default=1.0)
-    parser.add_argument("--epsilon-decay", type=float, default=0.99995)
+    #parser.add_argument("--epsilon-decay", type=float, default=0.99995)
     parser.add_argument("--epsilon-min", type=float, default=0.01)
-    parser.add_argument("--target-update-frequency", type=int, default=500)
-    parser.add_argument("--replay-start-size", type=int, default=5000)
-    parser.add_argument("--max-episode-steps", type=int, default=10000)
+    parser.add_argument("--epsilon-decay-steps", type=int, default=200000, help="Epsilon 從 start 衰減到 min 所需的總步數")
+    parser.add_argument("--target-update-frequency", type=int, default=4000)
+    parser.add_argument("--replay-start-size", type=int, default=2000)
+    parser.add_argument("--max-episode-steps", type=int, default=10_000)
     parser.add_argument("--train-per-step", type=int, default=1)
     args = parser.parse_args()
     # Set random seeds
@@ -335,4 +360,4 @@ if __name__ == "__main__":
         torch.cuda.manual_seed_all(seed)
     wandb.init(project="DLP-Lab5-DQN-Pong", name=args.wandb_run_name, save_code=True)
     agent = DQNAgent(args=args)
-    agent.run()
+    agent.run(episodes=args.num_episodes)
