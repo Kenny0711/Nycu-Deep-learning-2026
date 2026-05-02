@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    台北市 忠孝東路四段 x 敦化南路一段 交叉口
+    Taipei Zhongxiao E. Rd Sec.4 × Dunhua S. Rd Sec.1 Intersection
+    座標參考：25.0412° N, 121.5514° E（以交叉口為原點）
+-->
+<nodes>
+    <!-- 交叉口中心（有號誌） -->
+    <node id="center" x="0.00" y="0.00" type="traffic_light"/>
+
+    <!-- 忠孝東路：西端（往西走）300m -->
+    <node id="W"  x="-300.00" y="0.00"  type="dead_end"/>
+    <!-- 忠孝東路：東端（往東走）300m -->
+    <node id="E"  x="300.00"  y="0.00"  type="dead_end"/>
+    <!-- 敦化南路：北端（往北走）300m -->
+    <node id="N"  x="0.00"    y="300.00" type="dead_end"/>
+    <!-- 敦化南路：南端（往南走）300m -->
+    <node id="S"  x="0.00"   y="-300.00" type="dead_end"/>
+</nodes>

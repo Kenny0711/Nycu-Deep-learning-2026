@@ -1,4 +1,5 @@
 # Spring 2026, 535518 Deep Learning
+# Spring 2026, 535518 Deep Learning
 # Lab5: Value-based RL
 # Contributors: Kai-Siang Ma and Alison Wen
 # Instructor: Ping-Chun Hsieh
@@ -45,17 +46,22 @@ class DQN(nn.Module):
         #)       
         ########## YOUR CODE HERE (5~10 lines) ##########
         self.network = nn.Sequential(
-           nn.Linear(input_dim, 64),
-           nn.ReLU(),
-           nn.Linear(64, 64),
-           nn.ReLU(),
-           nn.Linear(64, num_actions)
-        )       
+        nn.Conv2d(input_dim, 32, kernel_size=8, stride=4), 
+        nn.ReLU(),
+        nn.Conv2d(32, 64, kernel_size=4, stride=2),
+        nn.ReLU(),
+        nn.Conv2d(64, 64, kernel_size=3, stride=1),
+        nn.ReLU(),
+        nn.Flatten(),
+        nn.Linear(64 * 7 * 7, 512),
+        nn.ReLU(),
+        nn.Linear(512, num_actions)
+        )
         
         ########## END OF YOUR CODE ##########
 
     def forward(self, x):
-        return self.network(x)
+        return self.network(x/255.0)
 
 
 class AtariPreprocessor:
@@ -113,9 +119,14 @@ class PrioritizedReplayBuffer:
         
 
 class DQNAgent:
-    def __init__(self, env_name="CartPole-v1", args=None):
+    def __init__(self, env_name="ALE/Pong-v5", args=None):
         self.env = gym.make(env_name, render_mode="rgb_array")
         self.test_env = gym.make(env_name, render_mode="rgb_array")
+        #0429
+       # input_dim = self.env.observation_space.shape[0]
+        input_dim=4
+        self.num_actions = self.env.action_space.n
+        self.preprocessor = AtariPreprocessor()
         self.num_actions = self.env.action_space.n
         self.preprocessor = AtariPreprocessor()
 
@@ -123,18 +134,21 @@ class DQNAgent:
         print("Using device:", self.device)
 
 
-        self.q_net = DQN(self.num_actions).to(self.device)
+        self.q_net = DQN(input_dim,self.num_actions).to(self.device)
         self.q_net.apply(init_weights)
-        self.target_net = DQN(self.num_actions).to(self.device)
+        self.target_net = DQN(input_dim,self.num_actions).to(self.device)
         self.target_net.load_state_dict(self.q_net.state_dict())
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=args.lr)
 
         self.batch_size = args.batch_size
         self.gamma = args.discount_factor
         self.epsilon = args.epsilon_start
-        self.epsilon_decay = args.epsilon_decay
+       # self.epsilon_decay = args.epsilon_decay
         self.epsilon_min = args.epsilon_min
-
+        #
+        self.epsilon_decay_steps = args.epsilon_decay_steps
+        self.epsilon_decrement = (args.epsilon_start - args.epsilon_min) / self.epsilon_decay_steps
+        #
         self.env_count = 0
         self.train_count = 0
         self.best_reward = 0  # Initilized to 0 for CartPole and to -21 for Pong
@@ -144,6 +158,8 @@ class DQNAgent:
         self.train_per_step = args.train_per_step
         self.save_dir = args.save_dir
         os.makedirs(self.save_dir, exist_ok=True)
+        #0429
+        self.memory = deque(maxlen=args.memory_size)
 
     def select_action(self, state):
         if random.random() < self.epsilon:
@@ -168,7 +184,7 @@ class DQNAgent:
                 done = terminated or truncated
                 
                 next_state = self.preprocessor.step(next_obs)
-                self.memory.append((state, action, reward, next_state, done))
+                self.memory.append((state, action, reward, next_state, terminated))
 
                 for _ in range(self.train_per_step):
                     self.train()
@@ -189,8 +205,16 @@ class DQNAgent:
                     })
                     ########## YOUR CODE HERE  ##########
                     # Add additional wandb logs for debugging if needed 
-                    
+                
                     ########## END OF YOUR CODE ##########   
+                    # print(f"[Eval] Ep: {ep} Total Reward: {total_reward} SC: {self.env_count} UC: {self.train_count} Eps: {self.epsilon:.4f}")
+                    # wandb.log({
+                    #     "Episode": ep,
+                    #     "Total Reward": total_reward,
+                    #     "Env Step Count": self.env_count,
+                    #     "Update Count": self.train_count,
+                    #     "Epsilon": self.epsilon
+                    # })
             print(f"[Eval] Ep: {ep} Total Reward: {total_reward} SC: {self.env_count} UC: {self.train_count} Eps: {self.epsilon:.4f}")
             wandb.log({
                 "Episode": ep,
@@ -222,23 +246,42 @@ class DQNAgent:
                     "Eval Reward": eval_reward
                 })
 
-    def evaluate(self):
-        obs, _ = self.test_env.reset()
-        state = self.preprocessor.reset(obs)
-        done = False
-        total_reward = 0
+    # def evaluate(self, episodes=20):
+    #     obs, _ = self.test_env.reset()
+    #     state = self.preprocessor.reset(obs)
+    #     done = False
+    #     total_reward = 0
 
-        while not done:
-            state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
-            with torch.no_grad():
-                action = self.q_net(state_tensor).argmax().item()
-            next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
-            done = terminated or truncated
-            total_reward += reward
-            state = self.preprocessor.step(next_obs)
+    #     while not done:
+    #         state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
+    #         with torch.no_grad():
+    #             action = self.q_net(state_tensor).argmax().item()
+    #         next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
+    #         done = terminated or truncated
+    #         total_reward += reward
+    #         state = self.preprocessor.step(next_obs)
 
-        return total_reward
+    #     return total_reward
+    def evaluate(self, num_episodes=20):
+        total_rewards = []
+        for _ in range(num_episodes):
+            obs, _ = self.test_env.reset()
+            state = self.preprocessor.reset(obs)
+            done = False
+            total_reward = 0
 
+            while not done:
+                state_tensor = torch.from_numpy(np.array(state)).float().unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    action = self.q_net(state_tensor).argmax().item()
+                next_obs, reward, terminated, truncated, _ = self.test_env.step(action)
+                done = terminated or truncated
+                total_reward += reward
+                state = self.preprocessor.step(next_obs)
+
+            total_rewards.append(total_reward)
+
+        return np.mean(total_rewards)
 
     def train(self):
 
@@ -247,7 +290,8 @@ class DQNAgent:
         
         # Decay function for epsilin-greedy exploration
         if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            self.epsilon -= self.epsilon_decrement
+            self.epsilon = max(self.epsilon, self.epsilon_min)
         self.train_count += 1
        
         ########## YOUR CODE HERE (<5 lines) ##########
@@ -268,10 +312,10 @@ class DQNAgent:
         q_values = self.q_net(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         
         ########## YOUR CODE HERE (~10 lines) ##########
-        # Implement the loss function of DQN and the gradient updates 
+        # Implement the loss function of DQN asnd the gradient updates 
         with torch.no_grad():
-            target_q = rewards + self.gamma * (1 - dones) * self.target_net(next_states).max(1)[0]
-            loss = nn.functional.smooth_l1_loss(q_values, target_q) 
+            target_q_val = rewards + self.gamma * (1 - dones) * self.target_net(next_states).max(1)[0]
+        loss = nn.functional.smooth_l1_loss(q_values, target_q_val)
 
         self.optimizer.zero_grad()   
         loss.backward()             
@@ -281,29 +325,33 @@ class DQNAgent:
 
         if self.train_count % self.target_update_frequency == 0:
             self.target_net.load_state_dict(self.q_net.state_dict())
-
         # NOTE: Enable this part if "loss" is defined
-        #if self.train_count % 1000 == 0:
-        #    print(f"[Train #{self.train_count}] Loss: {loss.item():.4f} Q mean: {q_values.mean().item():.3f} std: {q_values.std().item():.3f}")
-
+        if self.train_count % 1000 == 0:
+            print(f"[Train #{self.train_count}] Loss: {loss.item():.4f} Q mean: {q_values.mean().item():.3f} std: {q_values.std().item():.3f}")
+        wandb.log({
+            "Loss": loss.item(),
+            "Env Step Count": self.env_count
+        })
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save-dir", type=str, default="./results")
     parser.add_argument("--wandb-run-name", type=str, default="cartpole-run")
-    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--memory-size", type=int, default=100000)
     parser.add_argument("--lr", type=float, default=0.0001)
     parser.add_argument("--discount-factor", type=float, default=0.99)
+    parser.add_argument("--num-episodes", type=int, default=5000)
     parser.add_argument("--epsilon-start", type=float, default=1.0)
-    parser.add_argument("--epsilon-decay", type=float, default=0.999999)
-    parser.add_argument("--epsilon-min", type=float, default=0.05)
-    parser.add_argument("--target-update-frequency", type=int, default=1000)
-    parser.add_argument("--replay-start-size", type=int, default=50000)
-    parser.add_argument("--max-episode-steps", type=int, default=10000)
+    #parser.add_argument("--epsilon-decay", type=float, default=0.99995)
+    parser.add_argument("--epsilon-min", type=float, default=0.01)
+    parser.add_argument("--epsilon-decay-steps", type=int, default=200000, help="Epsilon 從 start 衰減到 min 所需的總步數")
+    parser.add_argument("--target-update-frequency", type=int, default=4000)
+    parser.add_argument("--replay-start-size", type=int, default=2000)
+    parser.add_argument("--max-episode-steps", type=int, default=10_000)
     parser.add_argument("--train-per-step", type=int, default=1)
     args = parser.parse_args()
 
     wandb.init(project="DLP-Lab5-DQN-CartPole", name=args.wandb_run_name, save_code=True)
     agent = DQNAgent(args=args)
-    agent.run()
+    agent.run(episodes=args.num_episodes)

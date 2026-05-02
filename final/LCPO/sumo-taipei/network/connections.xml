@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    車道連結：定義每個進入車道可以去哪個出口車道
+    忠孝東路4車道：最右車道直行+右轉，中間2車道直行，最左車道直行+左轉
+    敦化南路3車道：右車道直行+右轉，中車道直行，左車道直行+左轉
+-->
+<connections>
+    <!-- ===== 忠孝東路 西進東出（W→C→E）直行 ===== -->
+    <connection from="W_to_C" to="C_to_E" fromLane="1" toLane="1"/>
+    <connection from="W_to_C" to="C_to_E" fromLane="2" toLane="2"/>
+    <connection from="W_to_C" to="C_to_E" fromLane="3" toLane="3"/>
+    <!-- 西進 右轉 → 往南（C_to_S） -->
+    <connection from="W_to_C" to="C_to_S" fromLane="0" toLane="0"/>
+    <!-- 西進 直行（最右也可直行） -->
+    <connection from="W_to_C" to="C_to_E" fromLane="0" toLane="0"/>
+    <!-- 西進 左轉 → 往北（C_to_N） -->
+    <connection from="W_to_C" to="C_to_N" fromLane="3" toLane="2"/>
+
+    <!-- ===== 忠孝東路 東進西出（E→C→W）直行 ===== -->
+    <connection from="E_to_C" to="C_to_W" fromLane="1" toLane="1"/>
+    <connection from="E_to_C" to="C_to_W" fromLane="2" toLane="2"/>
+    <connection from="E_to_C" to="C_to_W" fromLane="3" toLane="3"/>
+    <!-- 東進 右轉 → 往北（C_to_N） -->
+    <connection from="E_to_C" to="C_to_N" fromLane="0" toLane="0"/>
+    <!-- 東進 直行（最右也可直行） -->
+    <connection from="E_to_C" to="C_to_W" fromLane="0" toLane="0"/>
+    <!-- 東進 左轉 → 往南（C_to_S） -->
+    <connection from="E_to_C" to="C_to_S" fromLane="3" toLane="2"/>
+
+    <!-- ===== 敦化南路 南進北出（S→C→N）直行 ===== -->
+    <connection from="S_to_C" to="C_to_N" fromLane="1" toLane="1"/>
+    <!-- 南進 右轉 → 往東（C_to_E） -->
+    <connection from="S_to_C" to="C_to_E" fromLane="0" toLane="0"/>
+    <!-- 南進 直行（最右也可直行） -->
+    <connection from="S_to_C" to="C_to_N" fromLane="0" toLane="0"/>
+    <!-- 南進 左轉 → 往西（C_to_W） -->
+    <connection from="S_to_C" to="C_to_W" fromLane="2" toLane="3"/>
+
+    <!-- ===== 敦化南路 北進南出（N→C→S）直行 ===== -->
+    <connection from="N_to_C" to="C_to_S" fromLane="1" toLane="1"/>
+    <!-- 北進 右轉 → 往西（C_to_W） -->
+    <connection from="N_to_C" to="C_to_W" fromLane="0" toLane="0"/>
+    <!-- 北進 直行（最右也可直行） -->
+    <connection from="N_to_C" to="C_to_S" fromLane="0" toLane="0"/>
+    <!-- 北進 左轉 → 往東（C_to_E） -->
+    <connection from="N_to_C" to="C_to_E" fromLane="2" toLane="3"/>
+</connections>

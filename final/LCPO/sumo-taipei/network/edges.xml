@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    忠孝東路：雙向各 4 車道，限速 50 km/h = 13.89 m/s
+    敦化南路：雙向各 3 車道，限速 50 km/h = 13.89 m/s
+    車道寬 3.5m（台北市標準）
+-->
+<edges>
+    <!-- 忠孝東路 西→東（車往東走，從西方進入） -->
+    <edge id="W_to_C" from="W" to="center" numLanes="4" speed="13.89" spreadType="center"/>
+    <!-- 忠孝東路 東→西（車往西走，從東方進入） -->
+    <edge id="E_to_C" from="E" to="center" numLanes="4" speed="13.89" spreadType="center"/>
+    <!-- 忠孝東路 出口：東→ -->
+    <edge id="C_to_E" from="center" to="E" numLanes="4" speed="13.89" spreadType="center"/>
+    <!-- 忠孝東路 出口：←西 -->
+    <edge id="C_to_W" from="center" to="W" numLanes="4" speed="13.89" spreadType="center"/>
+
+    <!-- 敦化南路 南→北（車往北走，從南方進入） -->
+    <edge id="S_to_C" from="S" to="center" numLanes="3" speed="13.89" spreadType="center"/>
+    <!-- 敦化南路 北→南（車往南走，從北方進入） -->
+    <edge id="N_to_C" from="N" to="center" numLanes="3" speed="13.89" spreadType="center"/>
+    <!-- 敦化南路 出口：↑北 -->
+    <edge id="C_to_N" from="center" to="N" numLanes="3" speed="13.89" spreadType="center"/>
+    <!-- 敦化南路 出口：↓南 -->
+    <edge id="C_to_S" from="center" to="S" numLanes="3" speed="13.89" spreadType="center"/>
+</edges>
