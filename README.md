@@ -11,6 +11,7 @@
 - [Lab 3 — MaskGIT for Image Inpainting](#lab-3--maskgit-for-image-inpainting)
 - [Lab 4 — Conditional VAE for Video Prediction](#lab-4--conditional-vae-for-video-prediction)
 - [Lab 5 — Deep Q-Network (DQN)](#lab-5--deep-q-network-dqn)
+- [Lab 6 — Generative Models (Conditional DDPM)](#lab-6--generative-models-conditional-ddpm)
 - [Final Project — SUMO Traffic Simulation with LCPO](#final-project--sumo-traffic-simulation-with-lcpo)
 
 ---
@@ -136,6 +137,35 @@
 | `dqn_task3.py` | DQN variant for Task 3 |
 | `test_model.py` | Model evaluation and video recording |
 | `eval_videos/` | Recorded evaluation episodes (MP4) |
+
+---
+
+## Lab 6 — Generative Models (Conditional DDPM)
+
+**Goal:** Implement a conditional Denoising Diffusion Probabilistic Model (DDPM) to generate synthetic images from multi-label object conditions on the iCLEVR dataset.
+
+### Framework
+- PyTorch + HuggingFace Diffusers
+
+### What was done
+- Implemented a conditional UNet2D with a 24-class → 512-dim MLP condition embedding
+- Used squaredcos_cap_v2 cosine noise schedule with 500 timesteps
+- Trained with Classifier-Free Guidance (CFG) dropout (10%) and AdamW + cosine warmup LR schedule
+- Applied CFG at inference time (scale sweep w=1~10) to boost conditional generation quality
+- Generated 64×64 images for test.json and new_test.json; evaluated with pretrained ResNet18 evaluator
+- **test.json accuracy: 0.88 | new_test.json accuracy: 0.90** (both ≥ 0.8 → full score)
+
+### Key Files
+
+| File | Description |
+|------|-------------|
+| `source code/train.py` | Training loop: noise addition, MSE loss, CFG dropout, WandB logging |
+| `source code/test.py` | Inference with CFG; saves per-image PNGs and make_grid visualizations |
+| `source code/unet.py` | UNet2DModel wrapper + ConditionEmbedding (24→512 MLP) |
+| `source code/data.py` | Dataset class for train/test/new_test modes with one-hot label encoding |
+| `images/test/` | 32 generated PNG images for test.json (0.png–31.png) |
+| `images/new_test/` | 32 generated PNG images for new_test.json (0.png–31.png) |
+| `DL_Lab6_Report_314553044_楊正豪.pdf` | Full report with implementation details, grids, denoising process, CFG experiment |
 
 ---
 

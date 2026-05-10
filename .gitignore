@@ -17,6 +17,7 @@
 **/submission.csv
 *.gif
 **/*.png
+!lab 6/DL_LAB6_314553044_楊正豪/images/**/*.png
 **/*.jpg
 **/*.jpeg
 **/wandb/
