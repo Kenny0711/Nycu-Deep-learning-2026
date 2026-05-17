@@ -13,6 +13,17 @@
 | Noisy Linear final eval reward | 約 13-15 |
 | Epsilon-greedy final eval reward | 約 18-20 |
 
+## Result Figures
+![Task 1 eval reward](results_assets/task1_eval_reward.png)
+
+![Task 2 eval reward](results_assets/task2_eval_reward.png)
+
+![Task 3 eval reward](results_assets/task3_eval_reward.png)
+
+![Task 3 ablation eval reward](results_assets/task3_ablation_eval_reward.png)
+
+![Task 3 ablation total reward](results_assets/task3_ablation_total_reward.png)
+
 ## What the Results Show
 - Task 1 達到滿分 500.00 / 500，且約 80k steps 就突破 eval reward 480。
 - Task 3 的 Enhanced DQN 約 1M steps 就穩定到 18-20，比 Task 2 Vanilla DQN 約 2M+ steps 更有效率。
